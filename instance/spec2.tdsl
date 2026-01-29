@@ -1,0 +1,6 @@
+Persons:
+Alice { Manager, age 40 }
+Bob { Employee, age 35 }
+
+Task Report Strategy person Alice priority: 5
+Task Pay 5000 euro person Bob priority: 2

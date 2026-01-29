@@ -1,0 +1,10 @@
+# Archivos generados
+target/
+instance/output/
+
+# Archivos de VS Code
+.vscode/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
