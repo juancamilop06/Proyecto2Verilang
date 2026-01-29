@@ -1,85 +1,67 @@
 module Generator3
 
+import IO;
+import Set;
+import List;
 import AST;
 import Syntax;
-import Parser;
-import Implode;
-import IO;
-import List;
 import String;
 
-str printAction(Action action) {
-    if (action.lunchAction?) return printAction(action.lunchAction);
-    if (action.meetingAction?) return printAction(action.meetingAction);
-    if (action.paperAction?) return printAction(action.paperAction);
-    if (action.paymentAction?) return printAction(action.paymentAction);
-    return "Unknown action!";
-}
+import Parser;
+import Implode;
 
-str printAction(LunchAction lunchAction) {
-    return "Lunch at location <lunchAction.location>";
-}
-
-str printAction(MeetingAction meetingAction) {
-    return "Meeting about <meetingAction.topic>";
-}
-
-str printAction(PaperAction paperAction) {
-    return "Report <paperAction.report>";
-}
-
-str printAction(PaymentAction paymentAction) {
-    return "Pay <paymentAction.amount> Euro";
-}
-
-str printDuration(duration) {
-    visit (duration) {
-        case duration(dl, unit): {
-            u = "";
-            visit (unit) {
-                case minute(): u = "m";
-                case hour(): u = "h";
-                case day(): u = "d";
-                case week(): u = "w";
-            }
-            return "with duration: <dl> <u>";
-        }
-    }
-    return "";
+str generator3(cast) {
+    ast = implode(cast);
+    rVal = 
+        "Info of the planning DepartmentABC
+        'All Persons:
+	    '       <for (person <- {name | /personTasks(name, _) := ast }) {><person>
+        '       <}>
+        'All actions of tasks:
+        '======
+        '        <printTaskWithDuration(ast)>
+        '=====
+        'Other way of listing all tasks:
+        '        <printTaskWithoutDuration(ast)>
+        '";
+    return rVal;
 }
 
 str printTaskWithDuration(ast) {
     rVal = [];
-    comp = [ <action, duration> | /task(action, _, duration) := ast ];
-    for (<a, d> <- comp) {
-        rVal += "<printAction(a)> <printDuration(d)>";
+    for (<a, d> <- [ <action, duration> | /task(action, prio, duration) := ast ]) {
+        rVal += "<printAction(a)> <prio> <printDuration(d)>";
     }
     return intercalate(" &\n", rVal);
 }
 
 str printTaskWithoutDuration(ast) {
     rVal = [];
-    for (a <- { action | /task(action, _, _) := ast }) {
-        rVal += "<printAction(a)>";
+    for (a <- { action | /task(action, prio, _) := ast }) {
+        rVal += "<printAction(a)> <prio>";
     }
     return intercalate(" ,\n", rVal);
 }
 
-str generator3(Planning ast) {
-    rVal = "Info using comprehensions
-           '======
-           '<printTaskWithDuration(ast)>
-           '=====
-           'Other way:
-           '<printTaskWithoutDuration(ast)>
-           '";
-    return rVal;
+str printAction(action) {
+    if (/lunchAction(location)  := action)  return "Lunch at location <location>";
+    if (/meetingAction(topic)   := action)  return "Meeting with topic <replaceAll(topic, "\"", "")>";
+    if (/paperAction(report)    := action)  return "Paper for journal <report>";
+    if (/paymentAction(amount)  := action)  return "Pay <amount> Euro";
+    return "Unknown action!";
 }
 
-void main() {
-    cast = parsePlanning(|project://rascaldsl/instance/spec1.tdsl|);
-    ast = implode(cast);
-    result = generator3(ast);
-    println(result);
-    writeFile(|project://rascaldsl/instance/output/generator3.txt|, result);
+str printDuration(duration) {
+    rVal = "";
+    if (/duration(dl, _) := duration) {
+        u = "";
+        if (/minute() := duration) u = "m";
+        if (/hour()   := duration) u = "h";
+        if (/day()    := duration) u = "d";
+        if (/week()   := duration) u = "w";
+        return "with duration: <dl> <u>";
+    } else {
+        ; // duration is optional
+    }
+    return rVal;
 }

@@ -1,77 +1,90 @@
 module Generator
 
+import IO;
+import Set;
+import List;
+import String;
+
 import Syntax;
 import Parser;
 import Checker;
-import IO;
-import List;
-import String;
-import ParseTree;
-import analysis::typepal::TypePal;
 
-str printAction((Action)`Lunch <ID location>`) {
-    return "Lunch at location <location>";
+void main() {
+    // inFile = |project://rascaldsl/instance/spec2.tdsl|;
+    inFile = |file:///home/des/rascaldsl/instance/spec2.tdsl|;
+    cst = parsePlanning(inFile);
+    rVal = generator(cst);
+    println(rVal);
 }
 
-str printAction((Action)`Meeting <STRING topic>`) {
-    return "Meeting about <topic>";
+str generator(cst) {
+    tm = modulesTModelFromTree(cst);
+    rVal = 
+        "Info of the planning DepartmentABC
+        'All Persons:
+	    '       <for (person <- {name | /(Person) `<ID name> { <Role role> , age <INT age> }` := cst }) {><person>
+        '       <}>
+        'All actions of tasks:
+        '======
+        '        <printTaskWithDuration(cst)>
+        '=====
+        'Other way of listing all tasks:
+        '        <printTaskWithoutDuration(cst, tm)>
+        '";
+    return rVal;
 }
 
-str printAction((Action)`Report <ID report>`) {
-    return "Report <report>";
-}
-
-str printAction((Action)`Pay <INT amount> euro`) {
-    return "Pay <amount> Euro";
-}
-
-str printDuration((Duration)`duration: <INT dl> <TimeUnit unit>`) {
-    u = "";
-    if ((TimeUnit)`min` := unit) u = "m";
-    else if ((TimeUnit)`hour` := unit) u = "h";
-    else if ((TimeUnit)`day` := unit) u = "d";
-    else if ((TimeUnit)`week` := unit) u = "w";
-    return "with duration: <dl> <u>";
-}
-
-default str printDuration(Duration? _) = "";
-
-str printOrganizer(name, tm) {
-    DefInfo defInfo = findReference(tm, name);
-    if (p <- defInfo.person) {
-        return "Organizer is: <name>, role: <p.role>, age: <p.age> -\>";
-    }
-    throw "Fix references in language instance";
-}
-
-DefInfo findReference(tm, use) {
-    defs = getUseDef(tm);
-    if (def <- defs[use.src]) {
-        return tm.definitions[def].defInfo;
-    }
-    throw "Fix references in language instance";
-}
-
-str printTaskWithoutDuration(cst, tm) {
+str printTaskWithDuration(ast) {
     rVal = [];
-    for (<a, m> <- { <action, name> | 
-        /(Task)`Task <Action action> person <ID name> priority: <INT prio> <Duration? duration>` := cst }) {
-        rVal += "<printOrganizer(m, tm)> <printAction(a)>";
+    for (<a, p, d> <- [ <action, prio, duration> | /(Task) `Task <Action action> person <ID name> priority: <INT prio> <Duration? duration>` := ast ]) {
+        rVal += "<printAction(a)> <p> <printDuration(d)>";
+    }
+    return intercalate(" &\n", rVal);
+}
+
+str printTaskWithoutDuration(ast, tm) {
+    rVal = [];
+    for (<a, p, m> <- { <action, prio, name> | /(Task) `Task <Action action> person <ID name> priority: <INT prio> <Duration? duration>` := ast }) {
+        rVal += "<printOrganizer(m, tm)> <p> <printAction(a)>";
     }
     return intercalate(" ,\n", rVal);
 }
 
-str generator(start[Planning] cst) {
-    tm = TModelFromTree(cst);
-    rVal = "Info using TypePal
-           '<printTaskWithoutDuration(cst, tm)>
-           '";
+str printAction(action) {
+    if (/(LunchAction) `Lunch <ID location>`      := action)  return "Lunch at location <location>";
+    if (/(MeetingAction) `Meeting <STRING topic>` := action)  return "Meeting with topic <replaceAll("<topic>", "\"", "")>";
+    if (/(PaperAction) `Report <ID report>`       := action)  return "Paper for journal <report>";
+    if (/(PaymentAction) `Pay <INT amount> euro`  := action)  return "Pay <amount> Euro";
+    return "Unknown action!";
+}
+
+str printDuration(duration) {
+    rVal = "";
+    if (/(Duration) `duration: <INT dl> <TimeUnit unit>` := duration) {
+        u = "";
+        if (/(Minute) `min` := duration) u = "m";
+        if (/(Hour) `hour`  := duration) u = "h";
+        if (/(Day) `day`    := duration) u = "d";
+        if (/(Week) `week`  := duration) u = "w";
+        return "with duration: <dl> <u>";
+    } else {
+        ; // duration is optional
+    }
     return rVal;
 }
 
-void main() {
-    cst = parsePlanning(|project://rascaldsl/instance/spec2.tdsl|);
-    result = generator(cst);
-    println(result);
-    writeFile(|project://rascaldsl/instance/output/generator.txt|, result);
+str printOrganizer(name, tm) {
+    DefInfo defInfo = findReference(tm, name);
+    println(defInfo);
+    if (p <- defInfo.person) {
+        return "Organizer is: <name>, role: <p.role>, age: <p.age> -\>";
+    }
+}
+
+DefInfo findReference(tm, use) {
+    defs = getUseDef(tm);
+    if (def <- defs[use.src]) { 
+        return tm.definitions[def].defInfo;
+    }
+    throw "Fix references in language instance";   
 }

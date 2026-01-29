@@ -1,35 +1,65 @@
 module Generator2
 
+import IO;
+import Set;
+import List;
 import AST;
 import Syntax;
-import Parser;
-import Implode;
-import IO;
-import List;
 import String;
 
-str printAction(Action action) {
-    if (action.lunchAction?) return printAction(action.lunchAction);
-    if (action.meetingAction?) return printAction(action.meetingAction);
-    if (action.paperAction?) return printAction(action.paperAction);
-    if (action.paymentAction?) return printAction(action.paymentAction);
+import Parser;
+import Implode;
+
+str generator2(cast) {
+    ast = implode(cast);
+    rVal = 
+        "Info of the planning DepartmentABC
+        'All Persons:
+	    '";
+        visit (ast) {
+            case personTasks(name, _):
+                rVal += "        <name>\n";
+        }
+        rVal +=
+        "All actions of tasks:
+        '======
+        '";
+        rVal += printTaskWithDuration(ast);
+        rVal +=
+        "
+        '=====
+        'Other way of listing all tasks:
+        '        <printTaskWithoutDuration(ast)>
+        '";
+    return rVal;
+}
+
+str printTaskWithDuration(ast) {
+    rVal = [];
+    visit (ast) {
+        case task(action, prio, duration): 
+            rVal += "        <printAction(action)> <prio> <printDuration(duration)>";
+    }
+    return intercalate(" &\n", rVal);
+}
+
+str printTaskWithoutDuration(ast) {
+    rVal = [];
+    visit (ast) {
+        case task(action, prio, _): 
+            rVal += "<printAction(action)> <prio>";
+    }
+    return intercalate(" ,\n", rVal);
+}
+
+str printAction(action) {
+    visit (action) {
+        case lunchAction(location): return "Lunch at location <location>";
+        case meetingAction(topic):  return "Meeting with topic <replaceAll(topic, "\"", "")>";
+        case paperAction(report):   return "Paper for journal <report>";
+        case paymentAction(amount): return "Pay <amount> Euro";
+    }
     return "Unknown action!";
-}
-
-str printAction(LunchAction lunchAction) {
-    return "Lunch at location <lunchAction.location>";
-}
-
-str printAction(MeetingAction meetingAction) {
-    return "Meeting about <meetingAction.topic>";
-}
-
-str printAction(PaperAction paperAction) {
-    return "Report <paperAction.report>";
-}
-
-str printAction(PaymentAction paymentAction) {
-    return "Pay <paymentAction.amount> Euro";
 }
 
 str printDuration(duration) {
@@ -38,49 +68,12 @@ str printDuration(duration) {
             u = "";
             visit (unit) {
                 case minute(): u = "m";
-                case hour(): u = "h";
-                case day(): u = "d";
-                case week(): u = "w";
+                case hour():   u = "h";
+                case day():    u = "d";
+                case week():   u = "w";
             }
             return "with duration: <dl> <u>";
         }
-    }
-    return "";
-}
-
-str printTaskWithDuration(ast) {
-    rVal = [];
-    visit (ast) {
-        case task(action, _, duration):
-            rVal += "<printAction(action)> <printDuration(duration)>";
-    }
-    return intercalate(" &\n", rVal);
-}
-
-str printTaskWithoutDuration(ast) {
-    rVal = [];
-    visit (ast) {
-        case task(action, _, _):
-            rVal += "<printAction(action)>";
-    }
-    return intercalate(" ,\n", rVal);
-}
-
-str generator2(Planning ast) {
-    rVal = "Info using visiting pattern
-           '======
-           '<printTaskWithDuration(ast)>
-           '=====
-           'Other way:
-           '<printTaskWithoutDuration(ast)>
-           '";
-    return rVal;
-}
-
-void main() {
-    cast = parsePlanning(|project://rascaldsl/instance/spec1.tdsl|);
-    ast = implode(cast);
-    result = generator2(ast);
-    println(result);
-    writeFile(|project://rascaldsl/instance/output/generator2.txt|, result);
+    } 
+    return ""; // duration is optional
 }

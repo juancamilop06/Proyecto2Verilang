@@ -1,9 +1,11 @@
 module Implode
 
-import AST;
 import Syntax;
-import ParseTree;
+import Parser;
+import AST;
 
-Planning implode(start[Planning] tree) {
-    return implode(#Planning, tree);
-}
+import ParseTree;
+import Node;
+
+public Planning implode(Tree pt) = implode(#Planning, pt);
+public Planning load(loc l) = implode(#Planning, parsePlanning(l));

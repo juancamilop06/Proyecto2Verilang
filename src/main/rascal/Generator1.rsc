@@ -1,17 +1,46 @@
 module Generator1
 
+import IO;
+import Set;
+import List;
 import AST;
 import Syntax;
-import Parser;
-import Implode;
-import IO;
-import List;
 import String;
 
-data GenTask = genTask(str action = "", int prio = 0, str duration = "");
+import Parser;
+import Implode;
 
-list[str] allPersons = [];
+data GenTask = genTask(str action = "", int prio = 0, str duration = "");
+list[str] allPersons = []; // normally do not do this
 list[GenTask] allPlans = [];
+
+void main() {
+    cast = parsePlanning(|project://rascaldsl/instance/spec1.tdsl|);
+    rVal = generator1(cast);
+    println(rVal);
+    writeFile(|project://rascaldsl/instance/output/generator1.txt|, rVal);
+}
+
+str generator1(cast) {
+    ast = implode(cast);
+    allPersons = []; // init to empty for the case you want to generate a second file
+    allPlans = [];
+    generate(ast);
+    rVal = 
+        "Info of the planning DepartmentABC
+        'All Persons:
+	    '       <for (person <- allPersons) {><person>
+        '       <}>
+        'All actions of tasks:
+        '======
+        '       <intercalate(" &\n", 
+                [ "<plan.action> <plan.prio> <plan.duration>" | plan <- allPlans])>
+        '=====
+        'Other way of listing all tasks:
+        '       <intercalate(" ,\n", [ "<plan.action> <plan.prio>" | plan <- allPlans])>
+        '";
+    return rVal;
+}
 
 void generate(Planning planning) {
     for (personTask <- planning.personList) {
@@ -27,8 +56,8 @@ void generate(PersonTasks personTasks) {
 }
 
 void generate(Task task) {
-    rVal = genTask(action = generateAction(task.action));
-    rVal.prio = task.prio;
+    rVal = genTask(action = generateAction(task.action)); // via constructor and via fields see next
+    rVal.prio = toInt("<task.prio>");
     for (dur <- task.duration) {
         rVal.duration = generateDuration(dur);
     }
@@ -36,9 +65,9 @@ void generate(Task task) {
 }
 
 str generateAction(Action action) {
-    if (action.lunchAction?) return generateAction(action.lunchAction);
+    if (action.lunchAction?)   return generateAction(action.lunchAction);
     if (action.meetingAction?) return generateAction(action.meetingAction);
-    if (action.paperAction?) return generateAction(action.paperAction);
+    if (action.paperAction?)   return generateAction(action.paperAction);
     if (action.paymentAction?) return generateAction(action.paymentAction);
     return "Unknown action!";
 }
@@ -48,11 +77,11 @@ str generateAction(LunchAction lunchAction) {
 }
 
 str generateAction(MeetingAction meetingAction) {
-    return "Meeting about <meetingAction.topic>";
+    return "Meeting with topic <replaceAll(meetingAction.topic, "\"", "")>";
 }
 
 str generateAction(PaperAction paperAction) {
-    return "Report <paperAction.report>";
+    return "Paper for journal <paperAction.report>";
 }
 
 str generateAction(PaymentAction paymentAction) {
@@ -65,38 +94,8 @@ str generateDuration(Duration dur) {
 
 str generateDuration(TimeUnit timeUnit) {
     if (timeUnit.minute?) return "m";
-    if (timeUnit.hour?) return "h";
-    if (timeUnit.day?) return "d";
-    if (timeUnit.week?) return "w";
-    return "";
-}
-
-str generator1(Planning ast) {
-    allPersons = [];
-    allPlans = [];
-    generate(ast);
-    
-    rVal = "Info of the planning DepartmentABC
-           'All Persons:
-           '<for (person <- allPersons) {><person>
-           '<}>
-           'All actions of tasks:
-           '======
-           '<intercalate(" &\n", 
-               ["<plan.action> <plan.prio> <plan.duration>" | plan <- allPlans])>
-           '=====
-           'Other way of listing all tasks:
-           '<intercalate(" ,\n", 
-               ["<plan.action> <plan.prio>" | plan <- allPlans])>
-           '";
-    
-    return rVal;
-}
-
-void main() {
-    cast = parsePlanning(|project://rascaldsl/instance/spec1.tdsl|);
-    ast = implode(cast);
-    result = generator1(ast);
-    println(result);
-    writeFile(|project://rascaldsl/instance/output/generator1.txt|, result);
+    if (timeUnit.hour?)   return "h";
+    if (timeUnit.day?)    return "d";
+    if (timeUnit.week?)   return "w";
+    return "Unknow time unit";
 }

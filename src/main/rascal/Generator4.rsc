@@ -1,71 +1,67 @@
 module Generator4
 
-import Syntax;
-import Parser;
 import IO;
+import Set;
 import List;
+// import AST;
+import Syntax;
 import String;
-import ParseTree;
 
-str printAction((Action)`Lunch <ID location>`) {
-    return "Lunch at location <location>";
+import Parser;
+// import Implode;
+
+
+str generator4(cst) {
+    rVal = 
+        "Info of the planning DepartmentABC
+        'All Persons:
+	    '       <for (person <- {name | /(PersonTasks) `Person <ID name> <Task+ tasks>` := cst }) {><person>
+        '       <}>
+        'All actions of tasks:
+        '======
+        '        <printTaskWithDuration(cst)>
+        '=====
+        'Other way of listing all tasks:
+        '        <printTaskWithoutDuration(cst)>
+        '";
+    return rVal;
 }
 
-str printAction((Action)`Meeting <STRING topic>`) {
-    return "Meeting about <topic>";
-}
-
-str printAction((Action)`Report <ID report>`) {
-    return "Report <report>";
-}
-
-str printAction((Action)`Pay <INT amount> euro`) {
-    return "Pay <amount> Euro";
-}
-
-str printDuration((Duration)`duration: <INT dl> <TimeUnit unit>`) {
-    u = "";
-    if ((TimeUnit)`min` := unit) u = "m";
-    else if ((TimeUnit)`hour` := unit) u = "h";
-    else if ((TimeUnit)`day` := unit) u = "d";
-    else if ((TimeUnit)`week` := unit) u = "w";
-    return "with duration: <dl> <u>";
-}
-
-default str printDuration(Duration? _) = "";
-
-str printTaskWithDuration(cst) {
+str printTaskWithDuration(ast) {
     rVal = [];
-    visit (cst) {
-        case (Task)`Task <Action action> priority: <INT prio> <Duration? duration>`:
-            rVal += "<printAction(action)> <printDuration(duration)>";
+    for (<a, p, d> <- [ <action, prio, duration> | /(Task) `Task <Action action> priority: <INT prio> <Duration? duration>` := ast ]) {
+        rVal += "<printAction(a)> <p> <printDuration(d)>";
     }
     return intercalate(" &\n", rVal);
 }
 
-str printTaskWithoutDuration(cst) {
+str printTaskWithoutDuration(ast) {
     rVal = [];
-    for (a <- { action | 
-        /(Task)`Task <Action action> priority: <INT prio> <Duration? duration>` := cst }) {
-        rVal += "<printAction(a)>";
+    for (<a, p> <- { <action, prop> | /(Task) `Task <Action action> priority: <INT prio> <Duration? duration>` := ast }) {
+        rVal += "<printAction(a)> <p>";
     }
     return intercalate(" ,\n", rVal);
 }
 
-str generator4(start[Planning] cst) {
-    rVal = "Info using concrete syntax
-           '======
-           '<printTaskWithDuration(cst)>
-           '=====
-           'Other way:
-           '<printTaskWithoutDuration(cst)>
-           '";
-    return rVal;
+str printAction(action) {
+    if (/(LunchAction) `Lunch <ID location>`      := action)  return "Lunch at location <location>";
+    if (/(MeetingAction) `Meeting <STRING topic>` := action)  return "Meeting with topic <replaceAll("<topic>", "\"", "")>";
+    if (/(PaperAction) `Report <ID report>`       := action)  return "Paper for journal <report>";
+    if (/(PaymentAction) `Pay <INT amount> euro`  := action)  return "Pay <amount> Euro";
+    return "Unknown action!";
 }
 
-void main() {
-    cst = parsePlanning(|project://rascaldsl/instance/spec1.tdsl|);
-    result = generator4(cst);
-    println(result);
-    writeFile(|project://rascaldsl/instance/output/generator4.txt|, result);
+str printDuration(duration) {
+    rVal = "";
+    if (/(Duration) `duration: <INT dl> <TimeUnit unit>` := duration) {
+        u = "";
+        if (/(Minute) `min` := duration) u = "m";
+        if (/(Hour) `hour`  := duration) u = "h";
+        if (/(Day) `day`    := duration) u = "d";
+        if (/(Week) `week`  := duration) u = "w";
+        return "with duration: <dl> <u>";
+    } else {
+        ; // duration is optional
+    }
+    return rVal;
 }
