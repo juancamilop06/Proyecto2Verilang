@@ -29,16 +29,18 @@ str generator4(cst) {
 
 str printTaskWithDuration(ast) {
     rVal = [];
-    for (<a, p, d> <- [ <action, prio, duration> | /(Task) `Task <Action action> priority: <INT prio> <Duration? duration>` := ast ]) {
-        rVal += "<printAction(a)> <p> <printDuration(d)>";
+    for (<a, d> <- [ <action, duration> | 
+          /(Task) `Task <Action action> priority: <INT _> <Duration? duration>` := ast ]) {
+        rVal += "<printAction(a)> <printDuration(d)>";
     }
     return intercalate(" &\n", rVal);
 }
 
 str printTaskWithoutDuration(ast) {
     rVal = [];
-    for (<a, p> <- { <action, prop> | /(Task) `Task <Action action> priority: <INT prio> <Duration? duration>` := ast }) {
-        rVal += "<printAction(a)> <p>";
+    for (a <- { action | 
+          /(Task) `Task <Action action> priority: <INT _> <Duration? _>` := ast }) {
+        rVal += "<printAction(a)>";
     }
     return intercalate(" ,\n", rVal);
 }

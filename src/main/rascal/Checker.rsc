@@ -43,4 +43,3 @@ void collect(current: (Task) `Task <Action action>
                         '<Duration? duration>`,  Collector c) {
      c.use(name, {personId()});
 }
-

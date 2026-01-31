@@ -10,8 +10,8 @@ import Parser;
 import Checker;
 
 void main() {
-    // inFile = |project://rascaldsl/instance/spec2.tdsl|;
-    inFile = |file:///home/des/rascaldsl/instance/spec2.tdsl|;
+    inFile = |project://rascaldsl/instance/spec2.tdsl|;
+    //inFile = |file:///home/des/rascaldsl/instance/spec2.tdsl|;
     cst = parsePlanning(inFile);
     rVal = generator(cst);
     println(rVal);
