@@ -1,90 +1,95 @@
 module Generator
 
 import IO;
-import Set;
 import List;
 import String;
-
+import ParseTree;
 import Syntax;
-import Parser;
-import Checker;
 
 void main() {
-    inFile = |project://rascaldsl/instance/spec2.tdsl|;
-    //inFile = |file:///home/des/rascaldsl/instance/spec2.tdsl|;
-    cst = parsePlanning(inFile);
-    rVal = generator(cst);
-    println(rVal);
+    loc inFile = |project://rascaldsl/instance/spec_verilang.vl|;
+    loc outFile = |project://rascaldsl/instance/output/summary.txt|;
+
+    println("Parsing <inFile>...");
+    start[Module] cst = parse(#start[Module], inFile);
+
+    str result = generateSummary(cst);
+    println(result);
+    writeFile(outFile, result);
+    println("Written to <outFile>");
 }
 
-str generator(cst) {
-    tm = modulesTModelFromTree(cst);
-    rVal = 
-        "Info of the planning DepartmentABC
-        'All Persons:
-	    '       <for (person <- {name | /(Person) `<ID name> { <Role role> , age <INT age> }` := cst }) {><person>
-        '       <}>
-        'All actions of tasks:
-        '======
-        '        <printTaskWithDuration(cst)>
-        '=====
-        'Other way of listing all tasks:
-        '        <printTaskWithoutDuration(cst, tm)>
+str generateSummary(cst) {
+    rVal =
+        "=== VeriLang Module Summary ===
+        'Module: <getModuleName(cst)>
+        'Imports:
+        '  <printImports(cst)>
+        'Spaces:
+        '  <printSpaces(cst)>
+        'Operators:
+        '  <printOperators(cst)>
+        'Variables:
+        '  <printVars(cst)>
+        'Rules:
+        '  <printRules(cst)>
+        'Expressions:
+        '  <printExpressions(cst)>
+        '===============================
         '";
     return rVal;
 }
 
-str printTaskWithDuration(ast) {
+str getModuleName(cst) {
+    if (/(Module) `defmodule <ID name> <Import* _> <Declaration* _> end` := cst)
+        return "<name>";
+    return "unknown";
+}
+
+str printImports(cst) {
     rVal = [];
-    for (<a, p, d> <- [ <action, prio, duration> | /(Task) `Task <Action action> person <ID name> priority: <INT prio> <Duration? duration>` := ast ]) {
-        rVal += "<printAction(a)> <p> <printDuration(d)>";
-    }
-    return intercalate(" &\n", rVal);
+    for (/(Import) `using <ID name>` := cst)
+        rVal += "using <name>";
+    return isEmpty(rVal) ? "(none)" : intercalate("\n  ", rVal);
 }
 
-str printTaskWithoutDuration(ast, tm) {
+str printSpaces(cst) {
     rVal = [];
-    for (<a, p, m> <- { <action, prio, name> | /(Task) `Task <Action action> person <ID name> priority: <INT prio> <Duration? duration>` := ast }) {
-        rVal += "<printOrganizer(m, tm)> <p> <printAction(a)>";
-    }
-    return intercalate(" ,\n", rVal);
+    for (/(DefSpace) `defspace <ID name> end` := cst)
+        rVal += "<name>";
+    for (/(DefSpace) `defspace <ID name> \< <ID base> end` := cst)
+        rVal += "<name> \< <base>";
+    return isEmpty(rVal) ? "(none)" : intercalate("\n  ", rVal);
 }
 
-str printAction(action) {
-    if (/(LunchAction) `Lunch <ID location>`      := action)  return "Lunch at location <location>";
-    if (/(MeetingAction) `Meeting <STRING topic>` := action)  return "Meeting with topic <replaceAll("<topic>", "\"", "")>";
-    if (/(PaperAction) `Report <ID report>`       := action)  return "Paper for journal <report>";
-    if (/(PaymentAction) `Pay <INT amount> euro`  := action)  return "Pay <amount> Euro";
-    return "Unknown action!";
+str printOperators(cst) {
+    rVal = [];
+    for (/(DefOperator) `defoperator <ID name> : <Type tp> end` := cst)
+        rVal += "<name> : <tp>";
+    for (/(DefOperator) `defoperator <ID name> : <Type tp> <AttributeBlock _> end` := cst)
+        rVal += "<name> : <tp> [attrs]";
+    return isEmpty(rVal) ? "(none)" : intercalate("\n  ", rVal);
 }
 
-str printDuration(duration) {
-    rVal = "";
-    if (/(Duration) `duration: <INT dl> <TimeUnit unit>` := duration) {
-        u = "";
-        if (/(Minute) `min` := duration) u = "m";
-        if (/(Hour) `hour`  := duration) u = "h";
-        if (/(Day) `day`    := duration) u = "d";
-        if (/(Week) `week`  := duration) u = "w";
-        return "with duration: <dl> <u>";
-    } else {
-        ; // duration is optional
-    }
-    return rVal;
+str printVars(cst) {
+    rVal = [];
+    for (/(VarDef) `<ID name> : <Type tp>` := cst)
+        rVal += "<name> : <tp>";
+    return isEmpty(rVal) ? "(none)" : intercalate("\n  ", rVal);
 }
 
-str printOrganizer(name, tm) {
-    DefInfo defInfo = findReference(tm, name);
-    println(defInfo);
-    if (p <- defInfo.person) {
-        return "Organizer is: <name>, role: <p.role>, age: <p.age> -\>";
-    }
+str printRules(cst) {
+    rVal = [];
+    for (/(DefRule) `defrule <OperatorApp lhs> -\> <OperatorApp rhs> end` := cst)
+        rVal += "<lhs> -\> <rhs>";
+    return isEmpty(rVal) ? "(none)" : intercalate("\n  ", rVal);
 }
 
-DefInfo findReference(tm, use) {
-    defs = getUseDef(tm);
-    if (def <- defs[use.src]) { 
-        return tm.definitions[def].defInfo;
-    }
-    throw "Fix references in language instance";   
+str printExpressions(cst) {
+    rVal = [];
+    for (/(DefExpression) `defexpression <Expression expr> end` := cst)
+        rVal += "<expr>";
+    for (/(DefExpression) `defexpression <Expression expr> <AttributeBlock _> end` := cst)
+        rVal += "<expr> [attrs]";
+    return isEmpty(rVal) ? "(none)" : intercalate("\n  ", rVal);
 }

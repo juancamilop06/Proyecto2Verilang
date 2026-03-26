@@ -1,70 +1,100 @@
 module Syntax
 
-layout Layout = WhitespaceAndComment* !>> [\ \t\n\r#];
+layout Layout = WhitespaceAndComment* !>> [\ \t\n\r];
 lexical WhitespaceAndComment = [\ \t\n\r] | @category="Comment" "#" ![\n]* $;
 
-// With references and TypePal
+start syntax Module
+    = verilangModule: 'defmodule' ID name Import* Declaration* 'end';
 
-start syntax Planning 
-    = planning:
-    'Persons:' Person+ persons
-    Task+ tasks
-;
-syntax Person 
-    = person: ID name '{' Role role ',' 'age' INT age '}'
-;
-syntax Task 
-     = task:
-    'Task' Action action
-    'person' ID name
-    'priority:' INT prio
-    Duration? duration
-;
-syntax Role
-     = manager: 'Manager'
-     | employee: 'Employee' 
-;
-syntax Duration 
-    = duration: 'duration' ':' INT dl TimeUnit unit
-;
-syntax Action 
-    = lunch: LunchAction lunchAction 
-    | meeting: MeetingAction meetingAction
-    | paper: PaperAction paperAction
-    | payment: PaymentAction paymentAction
-;
-syntax LunchAction 
-    = lunchAction: 'Lunch' ID location
-;
-syntax MeetingAction 
-    = meetingAction: 'Meeting' STRING topic
-;
-syntax PaperAction 
-    = paperAction: 'Report' ID report
-;
-syntax PaymentAction 
-    = paymentAction: 'Pay' INT amount 'euro'
-;
-syntax TimeUnit 
-    = minute: Minute minute 
-    | hour: Hour hour 
-    | day: Day day 
-    | week: Week week
-;
-syntax Minute 
-    = minute: 'min'
-;
-syntax Hour 
-    = hour: 'hour'
-;
-syntax Day 
-    = day: 'day'
-;
-syntax Week 
-    = week:'week'
-;
-lexical INT = ([\-0-9][0-9]* !>> [0-9]); 
+syntax Import
+    = using: 'using' ID name;
+
+syntax Declaration
+    = DefSpace
+    | DefOperator
+    | DefRule
+    | DefExpression
+    | DefVar;
+
+syntax DefSpace
+    = defspace: 'defspace' ID name ('\<' ID base)? 'end';
+
+syntax DefOperator
+    = defoperator: 'defoperator' ID name ':' Type tp AttributeBlock? 'end';
+
+syntax Type
+    = typeBase: ID name
+    | typeArrow: ID name '-\>' Type next;
+
+syntax AttributeBlock
+    = attributeBlock: '[' Attribute+ ']';
+
+syntax Attribute
+    = attribute: ID name (':' AttributeValue)?;
+
+syntax AttributeValue
+    = attrId: ID name
+    | attrEmpty: '∅';
+
+syntax DefVar
+    = defvar: 'defvar' {VarDef ","}+ 'end';
+
+syntax VarDef
+    = vardef: ID name ':' Type tp;
+
+syntax DefRule
+    = defrule: 'defrule' OperatorApp '-\>' OperatorApp 'end';
+
+syntax OperatorApp
+    = opapp: '(' ID name Term+ ')';
+
+syntax DefExpression
+    = defexpression: 'defexpression' Expression AttributeBlock? 'end';
+
+syntax Expression
+    = quantExpr: QuantifiedExpr
+    | logExpr:   LogicalExpr;
+
+syntax QuantifiedExpr
+    = forallExpr: 'forall' ID var 'in' ID domain '.' Expression body
+    | existsExpr: 'exists' ID var 'in' ID domain '.' Expression body;
+
+syntax LogicalExpr
+    = equivExpr: LogicalExpr '≡'   LogicalExpr
+    > implExpr:  LogicalExpr '=\>'  LogicalExpr
+    > orExpr:    LogicalExpr 'or'  LogicalExpr
+    > andExpr:   LogicalExpr 'and' LogicalExpr
+    > negExpr:   'neg' LogicalExpr
+    | relBase:   RelExpr;
+
+syntax RelExpr
+    = relExpr:   Term RelOp Term
+    | inExpr:    Term 'in' Term
+    | infixApp:  Term ID op Term
+    | termBase:  Term;
+
+syntax RelOp
+    = eq:  '='
+    | lt:  '\<'
+    | gt:  '\>'
+    | leq: '\<='
+    | geq: '\>='
+    | neq: '\<\>';
+
+syntax Term
+    = termOp:    OperatorApp
+    | termId:    ID name
+    | termParen: '(' Expression ')'
+    | termInt:   INT
+    | termFloat: FLOAT;
+
+lexical INT    = [0-9]+ !>> [0-9.];
+lexical FLOAT  = [0-9]+ '.' [0-9]+ !>> [0-9];
+lexical ID     = ([a-zA-Z][a-zA-Z0-9\-]* !>> [a-zA-Z0-9\-]) \ Reserved;
 lexical STRING = "\"" ![\"\n]* "\"";
-lexical ID = ([a-zA-Z/.\-][a-zA-Z0-9_/.]* !>> [a-zA-Z0-9_/.]) \ Reserved;
-keyword Reserved = "Person" | "Task" | "priority" | "duration" | "Lunch" | "Meeting" 
-                    | "Report"  | "Pay" | "euro" | "min" | "hour" | "day" | "week" | ":";
+
+keyword Reserved
+    = "defmodule" | "using"         | "defspace"     | "defoperator"
+    | "defrule"   | "defexpression" | "defvar"       | "forall"
+    | "exists"    | "defer"         | "end"
+    | "and"       | "or"            | "neg"           | "in";
