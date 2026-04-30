@@ -4,7 +4,7 @@ layout Layout = WhitespaceAndComment* !>> [\ \t\n\r];
 lexical WhitespaceAndComment = [\ \t\n\r] | @category="Comment" "#" ![\n]* $;
 
 start syntax Module
-    = verilangModule: 'defmodule' ID name Import* Declaration* 'end';
+    = verilangModule: 'defmodule' ID name Import* imports Declaration* decls 'end';
 
 syntax Import
     = using: 'using' ID name;
@@ -23,8 +23,12 @@ syntax DefOperator
     = defoperator: 'defoperator' ID name ':' Type tp AttributeBlock? 'end';
 
 syntax Type
-    = typeBase: ID name
-    | typeArrow: ID name '-\>' Type next;
+    = typeBase:   ID name
+    | typeInt:    'Int'
+    | typeBool:   'Bool'
+    | typeChar:   'Char'
+    | typeString: 'String'
+    > right typeArrow: Type left '-\>' Type right;
 
 syntax AttributeBlock
     = attributeBlock: '[' Attribute+ ']';
@@ -33,7 +37,7 @@ syntax Attribute
     = attribute: ID name (':' AttributeValue)?;
 
 syntax AttributeValue
-    = attrId: ID name
+    = attrId:    ID name
     | attrEmpty: '∅';
 
 syntax DefVar
@@ -81,20 +85,33 @@ syntax RelOp
     | geq: '\>='
     | neq: '\<\>';
 
+// Typed literals — criterio 4 de la rubrica
 syntax Term
-    = termOp:    OperatorApp
-    | termId:    ID name
-    | termParen: '(' Expression ')'
-    | termInt:   INT
-    | termFloat: FLOAT;
+    = termOp:     OperatorApp
+    | termId:     ID name
+    | termParen:  '(' Expression ')'
+    | termInt:    INT ':' 'Int'
+    | termBool:   BoolLit ':' 'Bool'
+    | termChar:   CHAR ':' 'Char'
+    | termString: STRING ':' 'String'
+    | termFloat:  FLOAT
+    | termBare:   INT
+    | termBareF:  FLOAT;
+
+syntax BoolLit
+    = bTrue:  'true'
+    | bFalse: 'false';
 
 lexical INT    = [0-9]+ !>> [0-9.];
 lexical FLOAT  = [0-9]+ '.' [0-9]+ !>> [0-9];
-lexical ID     = ([a-zA-Z][a-zA-Z0-9\-]* !>> [a-zA-Z0-9\-]) \ Reserved;
+lexical CHAR = [\'] ![\'\\\n] [\'];
 lexical STRING = "\"" ![\"\n]* "\"";
+lexical ID     = ([a-zA-Z][a-zA-Z0-9\-]* !>> [a-zA-Z0-9\-]) \ Reserved;
 
 keyword Reserved
     = "defmodule" | "using"         | "defspace"     | "defoperator"
     | "defrule"   | "defexpression" | "defvar"       | "forall"
     | "exists"    | "defer"         | "end"
-    | "and"       | "or"            | "neg"           | "in";
+    | "and"       | "or"            | "neg"           | "in"
+    | "Int"       | "Bool"          | "Char"          | "String"
+    | "true"      | "false";

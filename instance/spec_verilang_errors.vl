@@ -1,0 +1,13 @@
+defmodule ErrorTest
+
+  defspace ValidSpace end
+
+  defoperator myOp: Bool -> Bool end
+
+  defvar x: Bool end
+
+  defspace BadSpace < NonExistentSpace end
+
+  defexpression (forall y in UndefinedSpace . y myOp x) end
+
+end

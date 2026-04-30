@@ -4,16 +4,20 @@ data Module = verilangModule(str name, list[Import] imports, list[Decl] decls);
 
 data Import = using(str name);
 
-data Decl 
+data Decl
     = spaceDecl(str name, list[str] base)
     | operatorDecl(str name, Type tp, list[Attribute] attrs)
     | ruleDecl(OperatorApp lhs, OperatorApp rhs)
     | expressionDecl(Expression expr, list[Attribute] attrs)
     | varDecl(list[VarDef] vars);
 
-data Type 
+data Type
     = typeBase(str name)
-    | typeArrow(str name, Type next);
+    | typeArrow(str name, Type next)
+    | typeInt()
+    | typeBool()
+    | typeChar()
+    | typeString();
 
 data Attribute = attribute(str name, list[str] val);
 
@@ -21,15 +25,18 @@ data VarDef = vardef(str name, Type tp);
 
 data OperatorApp = opapp(str name, list[Term] args);
 
-data Term 
-    = tOpApp(OperatorApp op)
+data Term
+    = tOpApp(OperatorApp opa)
     | tId(str name)
     | tParen(Expression expr)
     | tInt(int i)
+    | tBool(bool b)
+    | tChar(str c)
+    | tString(str s)
     | tFloat(real f)
-    | tInfix(Term tleft, str op, Term tright);
+    | tInfix(Term tleft, str infixOp, Term tright);
 
-data Expression 
+data Expression
     = forallExpr(str var, str domain, Expression body)
     | existsExpr(str var, str domain, Expression body)
     | equivExpr(Expression eleft, Expression eright)

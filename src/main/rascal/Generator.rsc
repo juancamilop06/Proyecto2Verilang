@@ -5,9 +5,11 @@ import List;
 import String;
 import ParseTree;
 import Syntax;
+import Checker;
+import TPChecker;
 
 void main() {
-    loc inFile = |project://rascaldsl/instance/spec_verilang.vl|;
+    loc inFile  = |project://rascaldsl/instance/spec_verilang.vl|;
     loc outFile = |project://rascaldsl/instance/output/summary.txt|;
 
     println("Parsing <inFile>...");
@@ -15,8 +17,51 @@ void main() {
 
     str result = generateSummary(cst);
     println(result);
-    writeFile(outFile, result);
-    println("Written to <outFile>");
+
+    println("=== Semantic Check ===");
+    list[str] errors = checkVeriLang(cst);
+    str semanticResult = "";
+    if (errors == []) {
+        println("No semantic errors found.");
+        semanticResult = "No semantic errors found.";
+    }
+    else {
+        println("Semantic errors found:");
+        semanticResult = "Semantic errors found:\n";
+        for (str e <- errors) {
+            println("  - <e>");
+            semanticResult += "  - <e>\n";
+        }
+    }
+
+    println("\n=== TypePal Check ===");
+    TModel tm = TModelFromTree(cst);
+    list[Message] msgs = getMessages(tm);
+    str typepalResult = "";
+    if (msgs == []) {
+        println("[TypePal] TModel OK - no errors");
+        typepalResult = "[TypePal] TModel OK - no errors";
+    }
+    else {
+        typepalResult = "[TypePal] Messages:\n";
+        for (msg <- msgs) {
+            if (!(msg is info)) {
+                println("  - <msg>");
+                typepalResult += "  - <msg>\n";
+            }
+        }
+        if (typepalResult == "[TypePal] Messages:\n") {
+            println("[TypePal] TModel OK - no errors");
+            typepalResult = "[TypePal] TModel OK - no errors";
+        }
+    }
+
+    str fullOutput = result +
+        "=== Semantic Check ===\n" + semanticResult + "\n" +
+        "=== TypePal Check ===\n" + typepalResult + "\n";
+
+    writeFile(outFile, fullOutput);
+    println("\nWritten to <outFile>");
 }
 
 str generateSummary(cst) {

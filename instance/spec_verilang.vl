@@ -2,13 +2,20 @@ defmodule Set
   using List
 
   defspace Set < SuperSet end
+  defspace SuperSet end
 
   defoperator union: Set -> Set -> Set [associative id:∅] end
   defoperator negation: Bool -> Bool end
+  defoperator isIn: Set -> Set -> Bool end
+  defoperator implication: Bool -> Bool -> Bool end
+  defoperator disjunction: Bool -> Bool -> Bool end
 
-  defvar p: Bool, q: Bool end
+  defvar p: Bool end
+  defvar q: Bool end
+  defvar n: Int end
 
   defrule (implication p q) -> (disjunction (negation p) q) end
 
-  defexpression (forall x in Element . (forall S in Set . x isIn S)) end
+  defexpression (forall x in Set . (forall S in Set . x isIn S)) end
+
 end
